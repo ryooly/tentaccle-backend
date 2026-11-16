@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import copy
+import threading
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -41,6 +42,9 @@ _TOKEN_ID_ALIASES: dict[str, str] = {
 
 _CACHE_TTL_SECONDS = 60.0
 _CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+# Chart requests for every chain arrive together. One shared lookup fills the cache
+# so CoinGecko is not called once per chain (that burst returns HTTP 429).
+_PRICE_LOCK = threading.Lock()
 
 
 @dataclass
@@ -108,6 +112,46 @@ def _resolve_coingecko_id(token: str) -> str:
     return key
 
 
+def _quote_from_row(row: Any) -> float | None:
+    if not isinstance(row, dict):
+        return None
+    price = row.get("usdt", row.get("usd"))
+    if price is None:
+        return None
+    return float(price)
+
+
+def _store_price(token_key: str, coin_id: str, price: float, fetched_at: str) -> dict[str, Any]:
+    payload = asdict(
+        TokenPriceResult(
+            token=token_key,
+            coin_id=coin_id,
+            price_usdt=price,
+            source="coingecko",
+            fetched_at=fetched_at,
+        )
+    )
+    _cache_set(f"token_price:{token_key}", payload)
+    return payload
+
+
+def _fetch_known_prices() -> None:
+    """One CoinGecko call for every aliased token, cached under each alias."""
+    ids = list(dict.fromkeys(_TOKEN_ID_ALIASES.values()))
+    data = _get_json(
+        COINGECKO_SIMPLE_PRICE_URL,
+        params={"ids": ",".join(ids), "vs_currencies": "usd,usdt"},
+    )
+    if not isinstance(data, dict):
+        return
+    fetched_at = _now_iso()
+    for alias, coin_id in _TOKEN_ID_ALIASES.items():
+        price = _quote_from_row(data.get(coin_id))
+        if price is None:
+            continue
+        _store_price(alias, coin_id, price, fetched_at)
+
+
 def get_token_price_usdt(token: str) -> dict[str, Any]:
     """Return the current price of a token quoted in USDT."""
     raw_token = token.strip()
@@ -117,6 +161,17 @@ def get_token_price_usdt(token: str) -> dict[str, Any]:
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
+
+    token_key = raw_token.lower()
+    if token_key in _TOKEN_ID_ALIASES:
+        with _PRICE_LOCK:
+            cached = _cache_get(cache_key)
+            if cached is not None:
+                return cached
+            _fetch_known_prices()
+            cached = _cache_get(cache_key)
+            if cached is not None:
+                return cached
 
     coin_id = _resolve_coingecko_id(raw_token)
     data = _get_json(
