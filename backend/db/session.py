@@ -3,10 +3,15 @@ from __future__ import annotations
 import os
 from collections.abc import Generator
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.base import Base
+
+# Load backend/.env (if present) so DATABASE_URL is available before the engine
+# is created. Existing environment variables always take precedence.
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gaspulse.db")
 

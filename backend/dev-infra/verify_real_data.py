@@ -10,18 +10,17 @@ Run:    python dev-infra/verify_real_data.py
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
-
-os.environ.setdefault(
-    "DATABASE_URL",
-    "postgresql+psycopg://gaspulse:gaspulse@127.0.0.1:5433/gaspulse",
-)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# Load backend/.env so DATABASE_URL points at the configured database.
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(PROJECT_ROOT / ".env")
 
 from fastapi.testclient import TestClient  # noqa: E402
 

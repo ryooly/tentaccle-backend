@@ -1,2 +1,0 @@
-- Create table to create a cart
-- Connect eachh other

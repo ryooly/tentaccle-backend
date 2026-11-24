@@ -1,0 +1,25 @@
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Local SQLite db
+*.db
+
+# Node (frontend)
+node_modules/
+dist/
+.vite/
+
+# PM2 / runtime logs
+backend/logs/
+*.log
+.pm2/

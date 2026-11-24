@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 import app.models  # noqa: F401
 from app.exception import Global
@@ -11,6 +12,12 @@ from app.modules.api.fee_chart import router as fee_chart_router
 from app.modules.api.testing import router as testing_router
 from db.base import Base
 from db.session import engine
+
+ALLOWED_ORIGINS = [
+    "https://tentaccle.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
 
 
 @asynccontextmanager
@@ -28,6 +35,14 @@ app = FastAPI(
 
 app.include_router(fee_chart_router)
 app.include_router(testing_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 Global.register(app)
 

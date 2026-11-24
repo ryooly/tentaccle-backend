@@ -9,22 +9,20 @@ Run:
 """
 from __future__ import annotations
 
-import os
 import random
 import sys
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
 
-# Point at the docker-compose Postgres BEFORE importing the app's DB session.
-os.environ.setdefault(
-    "DATABASE_URL",
-    "postgresql+psycopg://gaspulse:gaspulse@127.0.0.1:5433/gaspulse",
-)
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# Load backend/.env so DATABASE_URL points at the configured database.
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(PROJECT_ROOT / ".env")
 
 from sqlalchemy import delete  # noqa: E402
 

@@ -21,8 +21,12 @@ if str(PROJECT_ROOT) not in sys.path:
 import .models  # noqa: F401,E402  (imports register every model on Base)
 from db.base import Base  # noqa: E402
 
-DEFAULT_URL = "postgresql+psycopg://gaspulse:gaspulse@127.0.0.1:5433/gaspulse"
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_URL)
+# Load backend/.env (if present); real env vars still win.
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(PROJECT_ROOT / ".env")
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gaspulse.db")
 
 config = context.config
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
